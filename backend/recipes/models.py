@@ -1,3 +1,136 @@
+from django.contrib.auth import get_user_model
+from django.core.validators import MinValueValidator
 from django.db import models
 
-# Create your models here.
+
+User = get_user_model()
+
+class CreatedAtAbstractModel(models.Model):
+    """
+    Абстрактная модель, которая используется
+    для установления даты создания объекта.
+    """
+    created_at = models.DateTimeField(verbose_name='Дата создания', auto_now_add=True)
+
+    class Meta:
+        abstract = True
+
+
+class Tag(models.Model):
+    """
+    Модель тэгов. Все указанные поля должны быть уникальны.
+    Цвет подразумевает использование HEX-формата
+    """
+    name = models.CharField(verbose_name='Название тэга', max_length=20, unique=True)
+    hex_color = models.CharField(verbose_name='Цвет в HEX-формате', max_length=7, unique=True)
+    slug = models.SlugField(verbose_name='Слаг', unique=True, db_index=True)
+
+    class Meta:
+        verbose_name = 'Тэг'
+        verbose_name_plural = 'Тэги'
+
+    def __str__(self) -> str:
+        return f'{self.name} (цвет: {self.hex_color})'
+
+
+class Ingredient(models.Model):
+    """
+    Модель ингредиентов. Включает в себя название продукта и его единицу измерения.
+    Название продукта должно быть уникальным.
+    """
+    name = models.CharField(verbose_name='Название продукта', max_length=100, unique=True)
+    measurement_unit = models.CharField(verbose_name='Единица измерения', max_length=100)
+
+    class Meta:
+        verbose_name = 'Ингредиент'
+        verbose_name_plural = 'Ингредиенты'
+        ordering = ('name',)
+
+    def __str__(self) -> str:
+        return str(self.name)
+
+
+class Recipe(CreatedAtAbstractModel):
+    """
+    Модель рецептов. Включает в себя название, картинку, описание.
+    Поля ингредиентов связана с промежуточной моделью 'RecipeIngredient'.
+    Поле тэгов напрямую не использует промежуточную таблицу.
+    """
+    author = models.ForeignKey(verbose_name='Автор рецепта', related_name='recipes',
+                               to=User, on_delete=models.CASCADE)
+    name = models.CharField(verbose_name='Название рецепта', max_length=200)
+    image = models.ImageField(verbose_name='Картинка', upload_to='recipes')
+    text = models.TextField(verbose_name='Описание')
+    cooking_time = models.PositiveSmallIntegerField(verbose_name='Время приготовления',
+                                                    validators=[
+                                                        MinValueValidator(
+                                                            limit_value=1,
+                                                            message=('Время приготовления не '
+                                                                     'может быть меньше 1 (в минутах)')
+                                                        )
+                                                    ])
+    ingredients = models.ManyToManyField(verbose_name='Ингредиенты', related_name='recipes',
+                                         through='RecipeIngredient', to='Ingredient')
+    tags = models.ManyToManyField(verbose_name='Тэги', related_name='recipes', to='Tag')
+
+    class Meta:
+        verbose_name = 'Рецепт'
+        verbose_name_plural = 'Рецепты'
+        ordering = ('-created_at',)
+
+    def __str__(self) -> str:
+        return str(self.name)
+
+
+class RecipeIngredient(models.Model):
+    """
+    Промежуточная таблица, включающая в себя рецепт
+    и ингредиент с указанием его количества.
+    """
+    recipe = models.ForeignKey(verbose_name='Рецепт', to='Recipe',
+                               on_delete=models.CASCADE, related_name='ingredient_list')
+    ingredient = models.ForeignKey(verbose_name='Ингредиент', to='Ingredient',
+                                   on_delete=models.CASCADE, related_name='ingredient_list')
+    amount = models.PositiveSmallIntegerField(verbose_name='Количество ингредиента',
+                                              validators=[
+                                                  MinValueValidator(
+                                                      limit_value=1,
+                                                      message=('Количество не может '
+                                                               'быть меньше 1.')
+                                                  )
+                                              ])
+
+
+class FavouriteRecipe(CreatedAtAbstractModel):
+    """
+    Модель избранных рецептов. Включает в себя поле
+    пользователя, добавившего рецепт, и сам рецепт.
+    """
+    subscriber = models.ForeignKey(verbose_name='Пользователь', to=User,
+                                   on_delete=models.CASCADE, related_name='favourite_recipes')
+    recipe = models.ForeignKey(verbose_name='Рецепт', to='Recipe',
+                               on_delete=models.CASCADE, related_name='favourite_recipes')
+
+    class Meta:
+        verbose_name = 'Избранное'
+        verbose_name_plural = 'Избранное'
+
+    def __str__(self) -> str:
+        return f'{self.subscriber.name} - [{self.recipe.name}]'
+
+
+class ShoppingCart(CreatedAtAbstractModel):
+    """
+    Модель списка рецептов, требуемых к покупке.
+    """
+    user = models.ForeignKey(verbose_name='Пользователь', to=User,
+                             on_delete=models.CASCADE, related_name='shopping_cart')
+    recipe = models.ForeignKey(verbose_name='Рецепт', to='Recipe',
+                               on_delete=models.CASCADE, related_name='shopping_carts')
+
+    class Meta:
+        verbose_name = 'Покупка'
+        verbose_name_plural = 'Покупки'
+
+    def __str__(self) -> str:
+        return f'[{self.created_at}] {self.user.name}: {self.recipe.name}'
