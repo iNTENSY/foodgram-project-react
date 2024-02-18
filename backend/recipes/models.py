@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator
 from django.db import models
-
+from django.db.models import UniqueConstraint
 
 User = get_user_model()
 
@@ -18,19 +18,19 @@ class CreatedAtAbstractModel(models.Model):
 
 class Tag(models.Model):
     """
-    Модель тэгов. Все указанные поля должны быть уникальны.
+    Модель тегов. Все указанные поля должны быть уникальны.
     Цвет подразумевает использование HEX-формата
     """
-    name = models.CharField(verbose_name='Название тэга', max_length=20, unique=True)
-    hex_color = models.CharField(verbose_name='Цвет в HEX-формате', max_length=7, unique=True)
-    slug = models.SlugField(verbose_name='Слаг', unique=True, db_index=True)
+    name = models.CharField(verbose_name='Название тега', max_length=20, unique=True)
+    color = models.CharField(verbose_name='Цвет в HEX-формате', max_length=7, unique=True)
+    slug = models.SlugField(verbose_name='Слаг', unique=True, db_index=True, blank=True)
 
     class Meta:
-        verbose_name = 'Тэг'
-        verbose_name_plural = 'Тэги'
+        verbose_name = 'Тег'
+        verbose_name_plural = 'Теги'
 
     def __str__(self) -> str:
-        return f'{self.name} (цвет: {self.hex_color})'
+        return f'{self.name} (цвет: {self.color})'
 
 
 class Ingredient(models.Model):
@@ -54,7 +54,7 @@ class Recipe(CreatedAtAbstractModel):
     """
     Модель рецептов. Включает в себя название, картинку, описание.
     Поля ингредиентов связана с промежуточной моделью 'RecipeIngredient'.
-    Поле тэгов напрямую не использует промежуточную таблицу.
+    Поле тегов напрямую не использует промежуточную таблицу.
     """
     author = models.ForeignKey(verbose_name='Автор рецепта', related_name='recipes',
                                to=User, on_delete=models.CASCADE)
@@ -71,7 +71,7 @@ class Recipe(CreatedAtAbstractModel):
                                                     ])
     ingredients = models.ManyToManyField(verbose_name='Ингредиенты', related_name='recipes',
                                          through='RecipeIngredient', to='Ingredient')
-    tags = models.ManyToManyField(verbose_name='Тэги', related_name='recipes', to='Tag')
+    tags = models.ManyToManyField(verbose_name='Теги', related_name='recipes', to='Tag')
 
     class Meta:
         verbose_name = 'Рецепт'
@@ -106,7 +106,7 @@ class FavouriteRecipe(CreatedAtAbstractModel):
     Модель избранных рецептов. Включает в себя поле
     пользователя, добавившего рецепт, и сам рецепт.
     """
-    subscriber = models.ForeignKey(verbose_name='Пользователь', to=User,
+    user = models.ForeignKey(verbose_name='Пользователь', to=User,
                                    on_delete=models.CASCADE, related_name='favourite_recipes')
     recipe = models.ForeignKey(verbose_name='Рецепт', to='Recipe',
                                on_delete=models.CASCADE, related_name='favourite_recipes')
@@ -114,9 +114,12 @@ class FavouriteRecipe(CreatedAtAbstractModel):
     class Meta:
         verbose_name = 'Избранное'
         verbose_name_plural = 'Избранное'
+        constraints = [
+            UniqueConstraint(fields=['user', 'recipe'], name='unique_favourite')
+        ]
 
     def __str__(self) -> str:
-        return f'{self.subscriber.name} - [{self.recipe.name}]'
+        return f'{self.user.name} - [{self.recipe.name}]'
 
 
 class ShoppingCart(CreatedAtAbstractModel):
@@ -131,6 +134,9 @@ class ShoppingCart(CreatedAtAbstractModel):
     class Meta:
         verbose_name = 'Покупка'
         verbose_name_plural = 'Покупки'
+        constraints = [
+            UniqueConstraint(fields=['user', 'recipe'], name='unique_shopping_cart')
+        ]
 
     def __str__(self) -> str:
         return f'[{self.created_at}] {self.user.name}: {self.recipe.name}'

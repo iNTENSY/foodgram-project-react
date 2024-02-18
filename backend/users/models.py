@@ -40,4 +40,4 @@ class Follow(models.Model):
         ]
 
     def __str__(self) -> str:
-        return f'{self.subscriber.name} отслеживает {self.author.name}'
+        return f'{self.subscriber.username} отслеживает {self.author.username}'
