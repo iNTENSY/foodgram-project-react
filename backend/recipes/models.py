@@ -100,26 +100,33 @@ class RecipeIngredient(models.Model):
                                                   )
                                               ])
 
+    class Meta:
+        verbose_name = 'Ингредиент рецепта'
+        verbose_name_plural = 'Ингредиенты для рецептов'
 
-class FavouriteRecipe(CreatedAtAbstractModel):
+    def __str__(self) -> str:
+        return f'{self.ingredient} - {self.recipe}'
+
+
+class FavoriteRecipe(CreatedAtAbstractModel):
     """
     Модель избранных рецептов. Включает в себя поле
     пользователя, добавившего рецепт, и сам рецепт.
     """
     user = models.ForeignKey(verbose_name='Пользователь', to=User,
-                                   on_delete=models.CASCADE, related_name='favourite_recipes')
+                                   on_delete=models.CASCADE, related_name='favorite_recipes')
     recipe = models.ForeignKey(verbose_name='Рецепт', to='Recipe',
-                               on_delete=models.CASCADE, related_name='favourite_recipes')
+                               on_delete=models.CASCADE, related_name='favorite_recipes')
 
     class Meta:
         verbose_name = 'Избранное'
         verbose_name_plural = 'Избранное'
         constraints = [
-            UniqueConstraint(fields=['user', 'recipe'], name='unique_favourite')
+            UniqueConstraint(fields=['user', 'recipe'], name='unique_favorite')
         ]
 
     def __str__(self) -> str:
-        return f'{self.user.name} - [{self.recipe.name}]'
+        return f'{self.user} - [{self.recipe.name}]'
 
 
 class ShoppingCart(CreatedAtAbstractModel):
@@ -139,4 +146,4 @@ class ShoppingCart(CreatedAtAbstractModel):
         ]
 
     def __str__(self) -> str:
-        return f'[{self.created_at}] {self.user.name}: {self.recipe.name}'
+        return f'[{self.created_at.strftime("%d.%m.%Y %H:%M")}] {self.user}: {self.recipe.name}'
