@@ -5,7 +5,7 @@ from users.models import User, Follow
 
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
-    pass
+    list_filter = ('email', 'first_name')
 
 
 @admin.register(Follow)

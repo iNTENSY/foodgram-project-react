@@ -3,24 +3,38 @@ from django.contrib import admin
 from recipes.models import Recipe, Tag, Ingredient, ShoppingCart, FavoriteRecipe, RecipeIngredient
 
 
+class RecipeIngredientsInline(admin.TabularInline):
+    model = RecipeIngredient
+
 @admin.register(Recipe)
 class RecipeAdmin(admin.ModelAdmin):
-    pass
+    list_display = ('name', 'author', 'counts')
+    list_filter = ('name', 'author', 'tags',)
+    inlines = (RecipeIngredientsInline,)
+
+    def counts(self, obj):
+        return obj.favorite_recipes.count()
 
 
 @admin.register(Tag)
 class TagAdmin(admin.ModelAdmin):
-    pass
+    list_display = ('name', 'color')
 
 
 @admin.register(Ingredient)
 class IngredientAdmin(admin.ModelAdmin):
-    pass
+    list_display = ('name', 'measurement_unit')
+    list_filter = ('name',)
 
 
 @admin.register(RecipeIngredient)
 class RecipeIngredientAdmin(admin.ModelAdmin):
-    pass
+    list_display = ('admin_title', 'ingredient', 'recipe')
+
+    def admin_title(self, obj):
+        return f'Запись номер {obj.id}'
+
+    admin_title.short_description = "Идентификатор"
 
 
 @admin.register(FavoriteRecipe)
@@ -30,4 +44,10 @@ class FavouriteRecipeAdmin(admin.ModelAdmin):
 
 @admin.register(ShoppingCart)
 class ShoppingCartAdmin(admin.ModelAdmin):
-    pass
+    list_display = ('admin_title', 'user', 'recipe')
+    list_filter = ('user', 'recipe')
+
+    def admin_title(self, obj):
+        return f'Запись на покупку номер {obj.id}'
+
+    admin_title.short_description = "Идентификатор покупки"
