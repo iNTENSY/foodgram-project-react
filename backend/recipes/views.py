@@ -1,8 +1,11 @@
+import datetime as dt
+
 from http import HTTPStatus
 from typing import Type
 
 from django.contrib.auth import get_user_model
-from django.db import models
+from django.db.models import Sum
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets
@@ -10,11 +13,12 @@ from rest_framework.permissions import IsAuthenticated, SAFE_METHODS
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from recipes.models import Tag, Ingredient, Recipe, ShoppingCart, FavoriteRecipe
+from recipes.models import Tag, Ingredient, Recipe, ShoppingCart, FavoriteRecipe, RecipeIngredient
 from recipes import serializers, filters, permissions
 from recipes.serializers import RecipeShortInfoSerializer
 
 User = get_user_model()
+
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Tag.objects.all()
@@ -67,6 +71,38 @@ class RecipeViewSet(viewsets.ModelViewSet):
         else:
             return self.delete_from(FavoriteRecipe, user, self.kwargs['pk'])
 
+    @action(
+        methods=['GET'],
+        detail=False,
+        permission_classes=(IsAuthenticated,)
+    )
+    def download_shopping_cart(self, request, *args, **kwargs):
+        user = request.user
+        if not user.shopping_cart.exists():
+            return Response(status=HTTPStatus.NOT_FOUND)
+        ingredients = RecipeIngredient.objects.filter(
+            recipe__shopping_carts__user=user
+        ).values(
+            'ingredient__name',
+            'ingredient__measurement_unit'
+        ).annotate(amount=Sum('amount'))
+
+        today = dt.date.today()
+        title = f'Foodgram: {today}\n\n'
+        shopping_list = title + '\n'.join(
+            [
+                f'- {ingredient["ingredient__name"]} '
+                f'({ingredient["ingredient__measurement_unit"]})'
+                f' - {ingredient["amount"]}'
+                for ingredient in ingredients
+            ]
+        )
+
+        filename = f'{today}-shopping-list.txt'
+        response = HttpResponse(shopping_list, content_type='text/plain')
+        response['Content-Disposition'] = f'attachment; filename={filename}'
+        return response
+
     @staticmethod
     def add_to(model: Type[ShoppingCart | FavoriteRecipe], user: User, pk: int):
         if model.objects.filter(recipe_id=pk, user=user).exists():
@@ -83,4 +119,3 @@ class RecipeViewSet(viewsets.ModelViewSet):
             obj.delete()
             return Response(status=HTTPStatus.NO_CONTENT)
         return Response({'error': 'Рецепт не существует или был удален'}, status=HTTPStatus.BAD_REQUEST)
-
