@@ -14,7 +14,9 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from recipes.models import Tag, Ingredient, Recipe, ShoppingCart, FavoriteRecipe, RecipeIngredient
-from recipes import serializers, filters, permissions
+from recipes import serializers, filters
+from recipes.paginations import CustomPagination
+from recipes.permissions import IsAuthorOrReadOnly, IsAdminOrReadOnly
 from recipes.serializers import RecipeShortInfoSerializer
 
 User = get_user_model()
@@ -23,10 +25,12 @@ User = get_user_model()
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Tag.objects.all()
     serializer_class = serializers.TagSerializer
+    permission_classes = (IsAdminOrReadOnly,)
 
 
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Ingredient.objects.all()
+    permission_classes = (IsAdminOrReadOnly,)
     serializer_class = serializers.FullInfoIngredientSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_class = filters.IngredientFilter
@@ -34,10 +38,10 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
 
 class RecipeViewSet(viewsets.ModelViewSet):
     queryset = Recipe.objects.all()
-    permission_classes = (permissions.IsAdminOrReadOnly,
-                          permissions.IsAuthorOrReadOnly)
+    permission_classes = (IsAdminOrReadOnly | IsAuthorOrReadOnly)
     filter_backends = (DjangoFilterBackend,)
     filterset_class = filters.RecipeFilter
+    pagination_class = CustomPagination
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
