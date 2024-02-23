@@ -8,7 +8,8 @@ class User(AbstractUser):
     Модель пользователя. Основным параметром является
     использование электронной почты в качестве ключевого идентификатора.
     """
-    email = models.EmailField(verbose_name='Электронная почта', unique=True, max_length=255)
+    email = models.EmailField(verbose_name='Электронная почта',
+                              unique=True, max_length=255)
     first_name = models.CharField(_('first name'), max_length=150)
     last_name = models.CharField(_('last name'), max_length=150)
 
@@ -20,7 +21,8 @@ class User(AbstractUser):
         verbose_name_plural = 'Пользователи'
 
     def __str__(self) -> str:
-        return f'{self.first_name[0]}.{self.last_name[0]}. [{self.email}]'
+        return (f'{self.first_name[0]}.{self.last_name[0]}. '
+                f'[{self.email}]')
 
 
 class Follow(models.Model):
@@ -29,9 +31,11 @@ class Follow(models.Model):
     автора, за кем следят, и самого подписчика.
     """
     author = models.ForeignKey(verbose_name='Автор', to='User',
-                               on_delete=models.CASCADE, related_name='subscribers')
-    subscriber = models.ForeignKey(verbose_name='Пользователь', to='User',
-                                   on_delete=models.CASCADE, related_name='follows')
+                               on_delete=models.CASCADE,
+                               related_name='subscribers')
+    subscriber = models.ForeignKey(verbose_name='Пользователь',
+                                   to='User', on_delete=models.CASCADE,
+                                   related_name='follows')
 
     class Meta:
         verbose_name = 'Подписка на пользователя'
@@ -44,4 +48,5 @@ class Follow(models.Model):
         ]
 
     def __str__(self) -> str:
-        return f'{self.subscriber.username} отслеживает {self.author.username}'
+        return (f'Пользователь "{self.subscriber.email}" '
+                f'отслеживает {self.author.username}')

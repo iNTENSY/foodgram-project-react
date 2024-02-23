@@ -7,11 +7,12 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from users.models import Follow
 from recipes.paginations import CustomPagination
+from users.models import Follow
 from users.serializers import CustomUserSerializer, FollowSerializer
 
 User = get_user_model()
+
 
 class CustomUserViewSet(UserViewSet):
     queryset = User.objects.all()
@@ -60,6 +61,6 @@ class CustomUserViewSet(UserViewSet):
         user = request.user
         query = Follow.objects.filter(subscriber=user)
         paginate = self.paginate_queryset(query)
-        serializer = FollowSerializer(paginate, many=True, context={'request': request})
+        serializer = FollowSerializer(paginate, many=True,
+                                      context={'request': request})
         return self.get_paginated_response(serializer.data)
-

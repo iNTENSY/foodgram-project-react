@@ -1,13 +1,12 @@
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.shortcuts import get_object_or_404
-from djoser.serializers import UserSerializer, UserCreateSerializer
+from djoser.serializers import UserSerializer
 from drf_extra_fields.fields import Base64ImageField
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from recipes.models import Tag, Ingredient, Recipe, RecipeIngredient
-from users.models import Follow
+from recipes.models import Ingredient, Recipe, RecipeIngredient, Tag
 from users.serializers import CustomUserSerializer
 
 User = get_user_model()
@@ -28,7 +27,9 @@ class FullInfoIngredientSerializer(serializers.ModelSerializer):
 class IngredientSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField()
     name = serializers.CharField(read_only=True, source='ingredient.name')
-    measurement_unit = serializers.CharField(read_only=True, source='ingredient.measurement_unit')
+    measurement_unit = serializers.CharField(
+        read_only=True, source='ingredient.measurement_unit'
+    )
 
     class Meta:
         model = RecipeIngredient
@@ -61,6 +62,7 @@ class RecipeReadSerializer(serializers.ModelSerializer):
             return False
         return obj.shopping_carts.filter(recipe=obj, user=user).exists()
 
+
 class IngredientInRecipeWriteSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(write_only=True)
 
@@ -84,25 +86,41 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
     def validate_ingredients(self, value):
         ingredients = value
         if not ingredients:
-            raise ValidationError(detail={'ingredients': 'Требуется хотя бы один ингредиент'})
+            raise ValidationError(
+                detail={'ingredients': 'Требуется хотя бы один ингредиент'}
+            )
         ingredient_list = []
         for item in ingredients:
             item_object = get_object_or_404(Ingredient, id=item['id'])
             if item_object in ingredient_list:
-                raise ValidationError(detail={'ingredients': 'Ингредиенты не должны повторяться'})
+                raise ValidationError(
+                    detail={
+                        'ingredients': 'Ингредиенты не должны повторяться'
+                    }
+                )
             if int(item['amount']) <= 0:
-                raise ValidationError(detail={'ingredients': 'Количество ингредиента должно быть больше 0'})
+                raise ValidationError(
+                    detail={
+                        'ingredients': 'Количество должно быть больше 0'
+                    }
+                )
             ingredient_list.append(item_object)
         return value
 
     def validate_tags(self, value):
         tags = value
         if not tags:
-            raise ValidationError(detail={'tags': 'Требуется хотя бы один тег'})
+            raise ValidationError(
+                detail={
+                    'tags': 'Требуется хотя бы один тег'
+                }
+            )
         tags_list = []
         for item in tags:
             if item in tags_list:
-                raise ValidationError(detail={'tags': 'Тег не должен повторяться'})
+                raise ValidationError(
+                    detail={'tags': 'Тег не должен повторяться'}
+                )
             tags_list.append(item)
         return value
 

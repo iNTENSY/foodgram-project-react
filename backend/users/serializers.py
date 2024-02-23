@@ -21,7 +21,11 @@ class CustomUserSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if request is None or request.user.is_anonymous:
             return False
-        return Follow.objects.filter(author=obj, subscriber=request.user).exists()
+        return (
+            Follow.objects
+            .filter(author=obj, subscriber=request.user)
+            .exists()
+        )
 
 
 class CustomUserCreateSerializer(UserCreateSerializer):
@@ -31,6 +35,7 @@ class CustomUserCreateSerializer(UserCreateSerializer):
             User.USERNAME_FIELD,
             'password',
         )
+
 
 class RecipeShortInfoSerializer(serializers.ModelSerializer):
     image = Base64ImageField()
@@ -60,5 +65,7 @@ class FollowSerializer(CustomUserSerializer):
         recipes = obj.recipes.all()
         if limit:
             recipes = recipes[:int(limit)]
-        serializer = RecipeShortInfoSerializer(recipes, many=True, read_only=True)
+        serializer = RecipeShortInfoSerializer(recipes,
+                                               many=True,
+                                               read_only=True)
         return serializer.data
