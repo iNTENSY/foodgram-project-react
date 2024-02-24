@@ -38,7 +38,7 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
 
 class RecipeViewSet(viewsets.ModelViewSet):
     queryset = Recipe.objects.all()
-    permission_classes = (IsAdminOrReadOnly | IsAuthorOrReadOnly)
+    permission_classes = (IsAdminOrReadOnly, IsAuthorOrReadOnly)
     filter_backends = (DjangoFilterBackend,)
     filterset_class = filters.RecipeFilter
     pagination_class = CustomPagination
@@ -108,8 +108,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         return response
 
     @staticmethod
-    def add_to(model: Type[ShoppingCart | FavoriteRecipe],
-               user: User, pk: int):
+    def add_to(model, user, pk: int):
         if model.objects.filter(recipe_id=pk, user=user).exists():
             return Response(
                 {'errors': 'Рецепт уже был добавлен'},
@@ -121,8 +120,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         return Response(serializer.data, status=HTTPStatus.CREATED)
 
     @staticmethod
-    def delete_from(model: Type[ShoppingCart | FavoriteRecipe],
-                    user: User, pk: int):
+    def delete_from(model, user: User, pk: int):
         obj = model.objects.filter(recipe_id=pk, user=user)
         if obj.exists():
             obj.delete()
