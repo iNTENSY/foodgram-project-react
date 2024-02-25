@@ -1,9 +1,8 @@
 import datetime as dt
 from http import HTTPStatus
-from typing import Type
 
 from django.contrib.auth import get_user_model
-from django.db.models import Sum
+from django.db.models import Sum, Prefetch
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
@@ -16,7 +15,7 @@ from recipes import filters, serializers
 from recipes.models import (FavoriteRecipe, Ingredient, Recipe,
                             RecipeIngredient, ShoppingCart, Tag)
 from recipes.paginations import CustomPagination
-from recipes.permissions import IsAdminOrReadOnly, IsAuthorOrReadOnly
+from recipes.permissions import IsAdminOrReadOnly, AdminOrAuthorOrReadOnly
 from recipes.serializers import RecipeShortInfoSerializer
 
 User = get_user_model()
@@ -37,8 +36,8 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
-    queryset = Recipe.objects.all()
-    permission_classes = (IsAdminOrReadOnly, IsAuthorOrReadOnly)
+    queryset = Recipe.objects.select_related('author').prefetch_related(Prefetch('ingredients')).all()
+    permission_classes = (AdminOrAuthorOrReadOnly,)
     filter_backends = (DjangoFilterBackend,)
     filterset_class = filters.RecipeFilter
     pagination_class = CustomPagination

@@ -8,8 +8,9 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from recipes.paginations import CustomPagination
-from users.models import Follow
-from users.serializers import CustomUserSerializer, FollowSerializer
+from recipes.permissions import AdminOrUserOrReadOnly
+from users.models import Subscribe
+from users.serializers import CustomUserSerializer, SubscribeSerializer
 
 User = get_user_model()
 
@@ -18,6 +19,7 @@ class CustomUserViewSet(UserViewSet):
     queryset = User.objects.all()
     serializer_class = CustomUserSerializer
     pagination_class = CustomPagination
+    permission_classes = [AdminOrUserOrReadOnly,]
 
     @action(
         detail=True,
@@ -34,33 +36,33 @@ class CustomUserViewSet(UserViewSet):
                 return Response({
                     'errors': 'Вы не можете подписываться на самого себя'
                 }, status=HTTPStatus.BAD_REQUEST)
-            if Follow.objects.filter(subscriber=user, author=author).exists():
+            if Subscribe.objects.filter(user=user, author=author).exists():
                 return Response({
                     'errors': 'Вы уже подписаны на данного пользователя'
                 }, status=HTTPStatus.BAD_REQUEST)
-            serializer = FollowSerializer(
+            serializer = SubscribeSerializer(
                 author, data=request.data, context={'request': request}
             )
             serializer.is_valid(raise_exception=True)
-            Follow.objects.create(subscriber=user, author=author)
+            Subscribe.objects.create(user=user, author=author)
             return Response(serializer.data, status=HTTPStatus.CREATED)
 
         if request.method == 'DELETE':
-            subscription = get_object_or_404(Follow,
-                                             subscriber=user,
+            subscription = get_object_or_404(Subscribe,
+                                             user=user,
                                              author=author)
             subscription.delete()
             return Response(status=HTTPStatus.NO_CONTENT)
 
     @action(
-        methods=['GET'],
         detail=False,
         permission_classes=[IsAuthenticated]
     )
     def subscriptions(self, request, *args, **kwargs):
         user = request.user
-        query = Follow.objects.filter(subscriber=user)
-        paginate = self.paginate_queryset(query)
-        serializer = FollowSerializer(paginate, many=True,
-                                      context={'request': request})
+        queryset = User.objects.filter(subscribing__user=user)
+        pages = self.paginate_queryset(queryset)
+        serializer = SubscribeSerializer(pages,
+                                         many=True,
+                                         context={'request': request})
         return self.get_paginated_response(serializer.data)

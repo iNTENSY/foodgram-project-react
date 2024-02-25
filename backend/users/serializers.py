@@ -1,10 +1,11 @@
 from django.contrib.auth import get_user_model
-from djoser.serializers import UserCreateSerializer
+from djoser.serializers import UserCreateSerializer, UserSerializer
 from drf_extra_fields.fields import Base64ImageField
-from rest_framework import serializers
+from rest_framework import serializers, status
+from rest_framework.exceptions import ValidationError
 
 from recipes.models import Recipe
-from users.models import Follow
+from users.models import Subscribe
 
 User = get_user_model()
 
@@ -22,8 +23,8 @@ class CustomUserSerializer(serializers.ModelSerializer):
         if request is None or request.user.is_anonymous:
             return False
         return (
-            Follow.objects
-            .filter(author=obj, subscriber=request.user)
+            Subscribe.objects
+            .filter(author=obj, user=request.user)
             .exists()
         )
 
@@ -45,7 +46,7 @@ class RecipeShortInfoSerializer(serializers.ModelSerializer):
         fields = ('id', 'image', 'name', 'cooking_time')
 
 
-class FollowSerializer(CustomUserSerializer):
+class SubscribeSerializer(CustomUserSerializer):
     recipes_count = serializers.SerializerMethodField()
     recipes = serializers.SerializerMethodField()
 
@@ -53,10 +54,24 @@ class FollowSerializer(CustomUserSerializer):
         fields = CustomUserSerializer.Meta.fields + (
             'recipes_count', 'recipes'
         )
-        read_only_fields = CustomUserSerializer.Meta.fields
+        read_only_fields = ('email', 'username')
 
-    @staticmethod
-    def get_recipes_count(obj):
+    def validate(self, data):
+        author = self.instance
+        user = self.context.get('request').user
+        if Subscribe.objects.filter(author=author, user=user).exists():
+            raise ValidationError(
+                detail='Вы уже подписаны на этого пользователя!',
+                code=status.HTTP_400_BAD_REQUEST
+            )
+        if user == author:
+            raise ValidationError(
+                detail='Вы не можете подписаться на самого себя!',
+                code=status.HTTP_400_BAD_REQUEST
+            )
+        return data
+
+    def get_recipes_count(self, obj):
         return obj.recipes.count()
 
     def get_recipes(self, obj):
@@ -65,7 +80,5 @@ class FollowSerializer(CustomUserSerializer):
         recipes = obj.recipes.all()
         if limit:
             recipes = recipes[:int(limit)]
-        serializer = RecipeShortInfoSerializer(recipes,
-                                               many=True,
-                                               read_only=True)
+        serializer = RecipeShortInfoSerializer(recipes, many=True, read_only=True)
         return serializer.data

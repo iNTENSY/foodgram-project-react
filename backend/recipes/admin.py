@@ -13,6 +13,7 @@ class RecipeAdmin(admin.ModelAdmin):
     list_display = ('name', 'author', 'counts')
     list_filter = ('name', 'author', 'tags',)
     inlines = (RecipeIngredientsInline,)
+    ordering = ['-created_at']
 
     def counts(self, obj):
         return obj.favorite_recipes.count()
