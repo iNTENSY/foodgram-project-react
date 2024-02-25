@@ -11,7 +11,7 @@ SECRET_KEY = env.str('SECRET_KEY', 'very-secret-key')
 
 DEBUG = env.bool('DEBUG', True)
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['intensy-foodgram.sytes.net', 'localhost', '127.0.0.1']
 
 INSTALLED_APPS = [
     'django.contrib.admin',
