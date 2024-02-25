@@ -8,13 +8,15 @@ volumes:
 services:
   db:
     image: postgres:13.10
-    env_file: ../backend/.env
+    env_file: .env
+    restart: always
     volumes:
       - pg_data:/var/lib/postgresql/data
 
   backend:
-    build: ../backend/
-    env_file: ../backend/.env
+    image: intensy/foodgram_backend
+    restart: always
+    env_file: .env
     volumes:
       - static:/app/static/
       - media:/app/media/
@@ -22,9 +24,7 @@ services:
       - db
 
   frontend:
-    build:
-      context: ../frontend
-      dockerfile: Dockerfile
+    image: intensy/foodgram_frontend
     volumes:
       - ../frontend/:/app/result_build/
 
