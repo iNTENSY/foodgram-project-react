@@ -1,5 +1,5 @@
 from django.contrib.auth import get_user_model
-from djoser.serializers import UserCreateSerializer, UserSerializer
+from djoser.serializers import UserCreateSerializer
 from drf_extra_fields.fields import Base64ImageField
 from rest_framework import serializers, status
 from rest_framework.exceptions import ValidationError
@@ -80,5 +80,7 @@ class SubscribeSerializer(CustomUserSerializer):
         recipes = obj.recipes.all()
         if limit:
             recipes = recipes[:int(limit)]
-        serializer = RecipeShortInfoSerializer(recipes, many=True, read_only=True)
+        serializer = RecipeShortInfoSerializer(recipes,
+                                               many=True,
+                                               read_only=True)
         return serializer.data

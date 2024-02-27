@@ -8,7 +8,6 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from recipes.paginations import CustomPagination
-from recipes.permissions import AdminOrUserOrReadOnly
 from users.models import Subscribe
 from users.permissions import IsRetrieveAuthenticatedOrReadOnly
 from users.serializers import CustomUserSerializer, SubscribeSerializer
