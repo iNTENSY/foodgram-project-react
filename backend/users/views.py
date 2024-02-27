@@ -10,6 +10,7 @@ from rest_framework.response import Response
 from recipes.paginations import CustomPagination
 from recipes.permissions import AdminOrUserOrReadOnly
 from users.models import Subscribe
+from users.permissions import IsRetrieveAuthenticatedOrReadOnly
 from users.serializers import CustomUserSerializer, SubscribeSerializer
 
 User = get_user_model()
@@ -19,7 +20,18 @@ class CustomUserViewSet(UserViewSet):
     queryset = User.objects.all()
     serializer_class = CustomUserSerializer
     pagination_class = CustomPagination
-    permission_classes = [AdminOrUserOrReadOnly,]
+    permission_classes = [IsRetrieveAuthenticatedOrReadOnly,]
+
+    @action(
+        detail=False,
+        permission_classes=(IsAuthenticated,),
+    )
+    def me(self, request):
+        serializer = CustomUserSerializer(
+            request.user,
+            context={'request': request}
+        )
+        return Response(serializer.data, status=HTTPStatus.OK)
 
     @action(
         detail=True,

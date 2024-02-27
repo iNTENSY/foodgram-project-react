@@ -14,7 +14,7 @@ services:
       - pg_data:/var/lib/postgresql/data
 
   backend:
-    image: intensy/foodgram_backend
+    image: intensy/foodgram_backend:latest
     restart: always
     env_file: .env
     volumes:
@@ -24,7 +24,7 @@ services:
       - db
 
   frontend:
-    image: intensy/foodgram_frontend
+    image: intensy/foodgram_frontend:latest
     volumes:
       - ./frontend/:/app/result_build/
 
