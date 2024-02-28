@@ -19,7 +19,7 @@ class CustomUserViewSet(UserViewSet):
     queryset = User.objects.all()
     serializer_class = CustomUserSerializer
     pagination_class = CustomPagination
-    permission_classes = [IsRetrieveAuthenticatedOrReadOnly,]
+    permission_classes = (IsRetrieveAuthenticatedOrReadOnly,)
 
     @action(
         detail=False,
