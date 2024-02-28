@@ -47,6 +47,21 @@ class RecipeViewSet(viewsets.ModelViewSet):
     filterset_class = filters.RecipeFilter
     pagination_class = CustomPagination
 
+    def get_queryset(self):
+        request = self.request
+        user = request.user
+        queryset = self.queryset
+        is_favorite = request.query_params.get('is_favorited')
+        is_in_shopping_cart = request.query_params.get('is_in_shopping_cart')
+
+        if is_favorite:
+            queryset = queryset.filter(favorite_recipes__user=user)
+
+        if is_in_shopping_cart:
+            queryset = queryset.filter(shopping_carts__user=user)
+
+        return queryset
+
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
 
