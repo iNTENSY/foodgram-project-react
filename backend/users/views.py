@@ -78,7 +78,9 @@ class CustomUserViewSet(UserViewSet):
     )
     def subscriptions(self, request, *args, **kwargs):
         user = request.user
-        queryset = User.objects.filter(subscribing__user=user).annotate(recipes_count=Count('recipes'))
+        queryset = (User.objects
+                    .filter(subscribing__user=user)
+                    .annotate(recipes_count=Count('recipes')))
         pages = self.paginate_queryset(queryset)
         serializer = SubscribeSerializer(pages,
                                          many=True,

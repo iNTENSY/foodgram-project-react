@@ -2,7 +2,7 @@ import datetime as dt
 from http import HTTPStatus
 
 from django.contrib.auth import get_user_model
-from django.db.models import Prefetch, Sum, Count
+from django.db.models import Prefetch, Sum
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
@@ -50,12 +50,16 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def get_serializer_context(self):
         context = super().get_serializer_context()
         if self.request.user:
-            context['subscriptions'] = set(FavoriteRecipe.objects
-                                           .filter(user=self.request.user)
-                                           .values_list('recipe__author_id', flat=True))
-            context['is_in_shopping_cart'] = set(ShoppingCart.objects
-                                                 .filter(user=self.request.user)
-                                                 .values_list('recipe__author_id', flat=True))
+            context['subscriptions'] = set(
+                FavoriteRecipe.objects
+                .filter(user=self.request.user)
+                .values_list('recipe__author_id', flat=True)
+            )
+            context['is_in_shopping_cart'] = set(
+                ShoppingCart.objects
+                .filter(user=self.request.user)
+                .values_list('recipe__author_id', flat=True)
+            )
         return context
 
     def get_queryset(self):
