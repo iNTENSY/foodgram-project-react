@@ -51,16 +51,10 @@ class RecipeReadSerializer(serializers.ModelSerializer):
                   'is_favorited', 'is_in_shopping_cart')
 
     def get_is_favorited(self, obj):
-        user = self.context['request'].user
-        if user.is_anonymous:
-            return False
-        return user.favorite_recipes.filter(recipe=obj).exists()
+        return obj.id in self.context['subscriptions']
 
     def get_is_in_shopping_cart(self, obj):
-        user = self.context['request'].user
-        if user.is_anonymous:
-            return False
-        return user.shopping_cart.filter(recipe=obj).exists()
+        return obj.id in self.context['is_in_shopping_cart']
 
 
 class IngredientInRecipeWriteSerializer(serializers.ModelSerializer):
@@ -98,57 +92,44 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
                         'ingredients': 'Ингредиенты не должны повторяться'
                     }
                 )
-            if int(item['amount']) <= 0:
-                raise ValidationError(
-                    detail={
-                        'ingredients': 'Количество должно быть больше 0'
-                    }
-                )
             ingredient_list.append(item_object)
         return value
 
-    def validate_tags(self, value):
-        tags = value
-        if not tags:
-            raise ValidationError(
-                detail={
-                    'tags': 'Требуется хотя бы один тег'
-                }
-            )
-        tags_list = []
-        for item in tags:
-            if item in tags_list:
-                raise ValidationError(
-                    detail={'tags': 'Тег не должен повторяться'}
-                )
-            tags_list.append(item)
-        return value
-
     @transaction.atomic
-    def create_ingredients(self, recipe, ingredients):
-        all_ingredients = [
-            RecipeIngredient(
-                amount=ingredient['amount'],
+    def create_ingredients(self, tags, recipe, ingredients):
+        recipe.tags.set(tags)
+        RecipeIngredient.objects.bulk_create(
+            [RecipeIngredient(
                 recipe=recipe,
-                ingredient=Ingredient.objects.get(id=ingredient['id'])
-            )
-            for ingredient in ingredients
-        ]
-        RecipeIngredient.objects.bulk_create(all_ingredients)
+                ingredient=Ingredient.objects.get(pk=ingredient['id']),
+                amount=ingredient['amount']
+            ) for ingredient in ingredients]
+        )
 
     @transaction.atomic
     def create(self, validated_data):
         tags = validated_data.pop('tags')
         ingredients = validated_data.pop('ingredients')
         recipe = Recipe.objects.create(**validated_data)
-        recipe.tags.set(tags)
-        self.create_ingredients(recipe=recipe, ingredients=ingredients)
+        self.create_ingredients(tags=tags, recipe=recipe, ingredients=ingredients)
         return recipe
 
+    @transaction.atomic
+    def update(self, instance: Recipe, validated_data):
+        instance.image = validated_data.get('image', instance.image)
+        instance.name = validated_data.get('name', instance.name)
+        instance.text = validated_data.get('text', instance.text)
+        instance.cooking_time = validated_data.get(
+            'cooking_time', instance.cooking_time)
+        tags = validated_data.pop('tags', instance.tags)
+        ingredients = validated_data.pop('ingredients', instance.ingredients)
+        RecipeIngredient.objects.filter(recipe=instance).delete()
+        self.create_ingredients(tags=tags, recipe=instance, ingredients=ingredients)
+        instance.save()
+        return instance
+
     def to_representation(self, instance):
-        request = self.context.get('request')
-        context = {'request': request}
-        return RecipeReadSerializer(instance, context=context).data
+        return RecipeReadSerializer(instance, context=self.context).data
 
 
 class RecipeShortInfoSerializer(serializers.ModelSerializer):

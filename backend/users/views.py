@@ -1,6 +1,7 @@
 from http import HTTPStatus
 
 from django.contrib.auth import get_user_model
+from django.db.models import Count
 from django.shortcuts import get_object_or_404
 from djoser.views import UserViewSet
 from rest_framework.decorators import action
@@ -20,6 +21,16 @@ class CustomUserViewSet(UserViewSet):
     serializer_class = CustomUserSerializer
     pagination_class = CustomPagination
     permission_classes = (IsRetrieveAuthenticatedOrReadOnly,)
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        if self.request.user.is_authenticated:
+            context['is_subscribed'] = set(
+                Subscribe.objects.filter(user=self.request.user)
+                .values_list('author_id')
+            )
+            context['recipes_count'] = self.request.user.recipes.count()
+        return context
 
     @action(
         detail=False,
@@ -43,10 +54,6 @@ class CustomUserViewSet(UserViewSet):
         author = get_object_or_404(User, id=author_id)
 
         if request.method == 'POST':
-            if user == author:
-                return Response({
-                    'errors': 'Вы не можете подписываться на самого себя'
-                }, status=HTTPStatus.BAD_REQUEST)
             if Subscribe.objects.filter(user=user, author=author).exists():
                 return Response({
                     'errors': 'Вы уже подписаны на данного пользователя'
@@ -71,7 +78,7 @@ class CustomUserViewSet(UserViewSet):
     )
     def subscriptions(self, request, *args, **kwargs):
         user = request.user
-        queryset = User.objects.filter(subscribing__user=user)
+        queryset = User.objects.filter(subscribing__user=user).annotate(recipes_count=Count('recipes'))
         pages = self.paginate_queryset(queryset)
         serializer = SubscribeSerializer(pages,
                                          many=True,

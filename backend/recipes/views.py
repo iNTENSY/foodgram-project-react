@@ -2,7 +2,7 @@ import datetime as dt
 from http import HTTPStatus
 
 from django.contrib.auth import get_user_model
-from django.db.models import Prefetch, Sum
+from django.db.models import Prefetch, Sum, Count
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
@@ -47,6 +47,17 @@ class RecipeViewSet(viewsets.ModelViewSet):
     filterset_class = filters.RecipeFilter
     pagination_class = CustomPagination
 
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        if self.request.user:
+            context['subscriptions'] = set(FavoriteRecipe.objects
+                                           .filter(user=self.request.user)
+                                           .values_list('recipe__author_id', flat=True))
+            context['is_in_shopping_cart'] = set(ShoppingCart.objects
+                                                 .filter(user=self.request.user)
+                                                 .values_list('recipe__author_id', flat=True))
+        return context
+
     def get_queryset(self):
         request = self.request
         user = request.user
@@ -79,8 +90,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if self.request.method == 'POST':
             return self.add_to(ShoppingCart, user, self.kwargs['pk'])
-        else:
-            return self.delete_from(ShoppingCart, user, self.kwargs['pk'])
+        return self.delete_from(ShoppingCart, user, self.kwargs['pk'])
 
     @action(
         methods=['POST', 'DELETE'],
@@ -91,8 +101,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if self.request.method == 'POST':
             return self.add_to(FavoriteRecipe, user, self.kwargs['pk'])
-        else:
-            return self.delete_from(FavoriteRecipe, user, self.kwargs['pk'])
+        return self.delete_from(FavoriteRecipe, user, self.kwargs['pk'])
 
     @action(
         methods=['GET'],
@@ -100,11 +109,10 @@ class RecipeViewSet(viewsets.ModelViewSet):
         permission_classes=(IsAuthenticated,)
     )
     def download_shopping_cart(self, request, *args, **kwargs):
-        user = request.user
-        if not user.shopping_cart.exists():
+        if not request.user.shopping_cart.exists():
             return Response(status=HTTPStatus.NOT_FOUND)
         ingredients = RecipeIngredient.objects.filter(
-            recipe__shopping_carts__user=user
+            recipe__shopping_carts__user=request.user
         ).values(
             'ingredient__name',
             'ingredient__measurement_unit'
