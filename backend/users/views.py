@@ -54,10 +54,6 @@ class CustomUserViewSet(UserViewSet):
         author = get_object_or_404(User, id=author_id)
 
         if request.method == 'POST':
-            if Subscribe.objects.filter(user=user, author=author).exists():
-                return Response({
-                    'errors': 'Вы уже подписаны на данного пользователя'
-                }, status=HTTPStatus.BAD_REQUEST)
             serializer = SubscribeSerializer(
                 author, data=request.data, context={'request': request}
             )
