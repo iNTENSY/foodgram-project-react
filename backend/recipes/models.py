@@ -102,10 +102,9 @@ class RecipeIngredient(models.Model):
     """
     recipe = models.ForeignKey(verbose_name='Рецепт', to='Recipe',
                                on_delete=models.CASCADE,
-                               related_name='ingredient_list')
+                               related_name='recipesingredients')
     ingredient = models.ForeignKey(verbose_name='Ингредиент',
-                                   to='Ingredient', on_delete=models.CASCADE,
-                                   related_name='ingredient_list')
+                                   to='Ingredient', on_delete=models.CASCADE)
     amount = models.PositiveSmallIntegerField(
         verbose_name='Количество ингредиента',
         validators=[
@@ -117,11 +116,16 @@ class RecipeIngredient(models.Model):
         ])
 
     class Meta:
-        verbose_name = 'Ингредиент рецепта'
-        verbose_name_plural = 'Ингредиенты для рецептов'
+        constraints = (
+            models.UniqueConstraint(fields=('recipe', 'ingredient',),
+                                    name='unique_recipe_with_ingredients'),
+        )
+        ordering = ['recipe']
+        verbose_name = 'Игредиент'
+        verbose_name_plural = 'Количество ингридиентов'
 
-    def __str__(self) -> str:
-        return f'{self.ingredient} - {self.recipe}'
+    def __str__(self):
+        return f'{self.recipe} ингредиенты: {self.ingredient}'
 
 
 class FavoriteRecipe(CreatedAtAbstractModel):

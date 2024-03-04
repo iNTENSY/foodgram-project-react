@@ -8,15 +8,18 @@ from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets
 from rest_framework.decorators import action
-from rest_framework.permissions import SAFE_METHODS, IsAuthenticated
+from rest_framework.permissions import (SAFE_METHODS, IsAuthenticated,
+                                        IsAuthenticatedOrReadOnly)
 from rest_framework.response import Response
 
 from recipes import filters, serializers
+from recipes.filters import RecipeFilter
 from recipes.models import (FavoriteRecipe, Ingredient, Recipe,
                             RecipeIngredient, ShoppingCart, Tag)
 from recipes.paginations import CustomPagination
-from recipes.permissions import AdminOrAuthorOrReadOnly, IsAdminOrReadOnly
-from recipes.serializers import RecipeShortInfoSerializer
+from recipes.permissions import IsAdminOrReadOnly, IsAuthorOrReadOnlyPermission
+from recipes.serializers import (ReadRecipeSerializer, RecipeCreateSerializer,
+                                 RecipeShortInfoSerializer)
 
 User = get_user_model()
 
@@ -30,7 +33,7 @@ class TagViewSet(viewsets.ReadOnlyModelViewSet):
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Ingredient.objects.all()
     permission_classes = (IsAdminOrReadOnly,)
-    serializer_class = serializers.FullInfoIngredientSerializer
+    serializer_class = serializers.IngredientsSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_class = filters.IngredientFilter
 
@@ -42,14 +45,15 @@ class RecipeViewSet(viewsets.ModelViewSet):
         .prefetch_related(Prefetch('ingredients'))
         .all()
     )
-    permission_classes = (AdminOrAuthorOrReadOnly,)
+    permission_classes = (IsAuthorOrReadOnlyPermission,
+                          IsAuthenticatedOrReadOnly)
     filter_backends = (DjangoFilterBackend,)
-    filterset_class = filters.RecipeFilter
+    filterset_class = RecipeFilter
     pagination_class = CustomPagination
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
-        if self.request.user:
+        if self.request.user.is_authenticated:
             context['subscriptions'] = set(
                 FavoriteRecipe.objects
                 .filter(user=self.request.user)
@@ -58,7 +62,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
             context['is_in_shopping_cart'] = set(
                 ShoppingCart.objects
                 .filter(user=self.request.user)
-                .values_list('recipe__author_id', flat=True)
+                .values_list('recipe_id', flat=True)
             )
         return context
 
@@ -82,8 +86,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     def get_serializer_class(self):
         if self.request.method in SAFE_METHODS:
-            return serializers.RecipeReadSerializer
-        return serializers.RecipeCreateSerializer
+            return ReadRecipeSerializer
+        return RecipeCreateSerializer
 
     @action(
         methods=['POST', 'DELETE'],
