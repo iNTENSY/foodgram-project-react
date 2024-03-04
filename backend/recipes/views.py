@@ -6,12 +6,6 @@ from django.db.models import Prefetch, Sum
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import viewsets
-from rest_framework.decorators import action
-from rest_framework.permissions import (SAFE_METHODS, IsAuthenticated,
-                                        IsAuthenticatedOrReadOnly)
-from rest_framework.response import Response
-
 from recipes import filters, serializers
 from recipes.filters import RecipeFilter
 from recipes.models import (FavoriteRecipe, Ingredient, Recipe,
@@ -20,6 +14,11 @@ from recipes.paginations import CustomPagination
 from recipes.permissions import IsAdminOrReadOnly, IsAuthorOrReadOnlyPermission
 from recipes.serializers import (ReadRecipeSerializer, RecipeCreateSerializer,
                                  RecipeShortInfoSerializer)
+from rest_framework import viewsets
+from rest_framework.decorators import action
+from rest_framework.permissions import (SAFE_METHODS, IsAuthenticated,
+                                        IsAuthenticatedOrReadOnly)
+from rest_framework.response import Response
 
 User = get_user_model()
 

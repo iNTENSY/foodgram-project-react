@@ -4,11 +4,10 @@ from django.contrib.auth import get_user_model
 from django.db.models import Count
 from django.shortcuts import get_object_or_404
 from djoser.views import UserViewSet
+from recipes.paginations import CustomPagination
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-
-from recipes.paginations import CustomPagination
 from users.models import Subscribe
 from users.permissions import IsRetrieveAuthenticatedOrReadOnly
 from users.serializers import CustomUserSerializer, SubscribeSerializer
