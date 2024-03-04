@@ -20,7 +20,7 @@
 ### Развертывание проекта
 
 - Установите на сервере docker и docker-compose.
-- Создайте файл /foodgram/.env. Шаблон для заполнения файла нахоится в /foodgram/.env.example.
+- Создайте файл /foodgram/.env
 - Выполните команду docker-compose up -d --buld.
 - Выполните миграции docker-compose exec backend python manage.py migrate.
 - Создайте суперюзера docker-compose exec backend python manage.py createsuperuser.
