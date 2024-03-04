@@ -35,7 +35,7 @@ class RecipeIngredientAdmin(admin.ModelAdmin):
     list_display = ('admin_title', 'ingredient', 'recipe')
 
     def admin_title(self, obj):
-        return f'Запись номер {obj.id}'
+        return f'Запись номер №{obj.id}'
 
     admin_title.short_description = "Идентификатор"
 
