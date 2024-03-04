@@ -8,7 +8,8 @@ from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets
 from rest_framework.decorators import action
-from rest_framework.permissions import SAFE_METHODS, IsAuthenticated, IsAuthenticatedOrReadOnly
+from rest_framework.permissions import (SAFE_METHODS, IsAuthenticated,
+                                        IsAuthenticatedOrReadOnly)
 from rest_framework.response import Response
 
 from recipes import filters, serializers
@@ -17,7 +18,8 @@ from recipes.models import (FavoriteRecipe, Ingredient, Recipe,
                             RecipeIngredient, ShoppingCart, Tag)
 from recipes.paginations import CustomPagination
 from recipes.permissions import IsAdminOrReadOnly, IsAuthorOrReadOnlyPermission
-from recipes.serializers import RecipeShortInfoSerializer, ReadRecipeSerializer, RecipeCreateSerializer
+from recipes.serializers import (ReadRecipeSerializer, RecipeCreateSerializer,
+                                 RecipeShortInfoSerializer)
 
 User = get_user_model()
 
@@ -39,6 +41,8 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
 class RecipeViewSet(viewsets.ModelViewSet):
     queryset = (
         Recipe.objects
+        .select_related('author')
+        .prefetch_related(Prefetch('ingredients'))
         .all()
     )
     permission_classes = (IsAuthorOrReadOnlyPermission,
